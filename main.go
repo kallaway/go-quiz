@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -26,8 +28,8 @@ func main() {
 
 	var quizDataSlice [][]string
 
-	for i, v := range qaPairs {
-		fmt.Printf("%v %v\n", i, v)
+	for i := range qaPairs {
+		// fmt.Printf("%v %v\n", i, v)
 		qaPair := strings.Split(qaPairs[i], ",")
 		quizDataSlice = append(quizDataSlice, qaPair)
 	}
@@ -40,13 +42,19 @@ func main() {
 		q := qa[0]
 		a := qa[1]
 		fmt.Printf("Q%v: %s\n", (i + 1), q)
-		var userResponse string
-		fmt.Scanln(userResponse)
 
-		if a == userResponse {
+		var userResponse string
+		reader := bufio.NewReader(os.Stdin)
+		userResponse, _ = reader.ReadString('\n')
+
+		userResponse = strings.Trim(userResponse, "\n")
+		// fmt.Printf("A is %v of type %T, its length is %v\n", a, a, len(a))
+		// fmt.Printf("userResponse is %v of type %T, its length is %v\n", userResponse, userResponse, len(userResponse))
+
+		if userResponse == a {
 			correctCount++
 		}
 	}
 	// post score
-	fmt.Printf("Game over. You've answered %v out of %v questions correctly.", correctCount, questionsCount)
+	fmt.Printf("Game over. You've answered %v out of %v questions correctly.\n", correctCount, questionsCount)
 }
