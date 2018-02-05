@@ -14,9 +14,11 @@ var correctCount int
 func main() {
 	fmt.Println("Welcome")
 	// first, see if there is a flag that specified name of the file.
-	fileFromCLI := flag.String("file", "problems.csv", "a csv file with questions and answers")
 	// if none: use and read problems.csv
-	fmt.Printf("You've chosen this file: %s", *fileFromCLI)
+	fileFromCLI := flag.String("file", "problems.csv", "a csv file in a format: question, answer (default is: problems.csv) ")
+
+	flag.Parse()
+	fmt.Printf("You've chosen this file: %s\n", *fileFromCLI)
 
 	fileToUse := "quiz-data/" + *fileFromCLI
 
