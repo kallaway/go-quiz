@@ -1,10 +1,9 @@
 package main
 
 import (
-	"bufio"
+	"encoding/csv"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -12,56 +11,71 @@ import (
 var correctCount int
 
 func main() {
-	fmt.Println("Welcome")
+
 	// first, see if there is a flag that specified name of the file.
 	// if none: use and read problems.csv
-	fileFromCLI := flag.String("file", "problems.csv", "a csv file in a format: question, answer (default is: problems.csv) ")
-
+	fileFromCLI := flag.String("file", "problems.csv", "a csv file in a format: question, answer (default is: problems.csv)\n")
+	// flag.Parse()
+	timeLimit := flag.String("limit", "30", "a number of seconds for which the quiz runs.")
 	flag.Parse()
-	fmt.Printf("You've chosen this file: %s\n", *fileFromCLI)
-
 	fileToUse := "quiz-data/" + *fileFromCLI
 
-	problems, err := ioutil.ReadFile(fileToUse)
+	fmt.Printf("You've chosen this file: %s\n", *fileFromCLI)
+	fmt.Printf("Welcome. You have %s seconds to start the quiz. Press 'Enter' to start the quiz.\n", *timeLimit)
+
+	// problems, err := ioutil.ReadFile(fileToUse)
+	file, err := os.Open(fileToUse)
 
 	if err != nil {
+		exit(fmt.Sprintf("Error when opening file with name: %s", *fileFromCLI))
 		fmt.Println("There has been an error opening the CSV file.")
 	}
 
-	problemsString := string(problems)
+	r := csv.NewReader(file)
 
-	qaPairs := strings.Split(problemsString, "\n")
-	questionsCount := len(qaPairs)
+	lines, err := r.ReadAll()
 
-	var quizDataSlice [][]string
-
-	for i := range qaPairs {
-		// fmt.Printf("%v %v\n", i, v)
-		qaPair := strings.Split(qaPairs[i], ",")
-		quizDataSlice = append(quizDataSlice, qaPair)
+	if err != nil {
+		exit("Failed to parse the file")
 	}
 
-	// fmt.Printf("The length of the quizDataSlice is %v", len(quizDataSlice))
+	// problemsString := string(problems)
 
-	// ask questions and if they are correct - update score. in the end, post score
-	for i := range quizDataSlice {
-		qa := quizDataSlice[i]
-		q := qa[0]
-		a := qa[1]
-		fmt.Printf("Q%v: %s\n", (i + 1), q)
+	problems := parseLines(lines)
 
-		var userResponse string
-		reader := bufio.NewReader(os.Stdin)
-		userResponse, _ = reader.ReadString('\n')
+	var numCorrect int
 
-		userResponse = strings.Trim(userResponse, "\n")
-		// fmt.Printf("A is %v of type %T, its length is %v\n", a, a, len(a))
-		// fmt.Printf("userResponse is %v of type %T, its length is %v\n", userResponse, userResponse, len(userResponse))
-
-		if userResponse == a {
-			correctCount++
+	for i, p := range problems {
+		fmt.Printf("Problem #%d: %s = ", i+1, p.q)
+		var answer string
+		fmt.Scanf("%s\n", &answer)
+		if answer == p.a {
+			numCorrect++
 		}
 	}
+
 	// post score
-	fmt.Printf("Game over. You've answered %v out of %v questions correctly.\n", correctCount, questionsCount)
+	fmt.Printf("Quiz has ended. You've answered %v out of %v questions correctly.\n", numCorrect, len(problems))
+}
+
+type problem struct {
+	q string
+	a string
+}
+
+func parseLines(lines [][]string) []problem {
+	ret := make([]problem, len(lines))
+	for i, line := range lines {
+		ret[i] = problem{
+			q: line[0],
+			a: strings.TrimSpace(line[1]),
+		}
+	}
+
+	return ret
+}
+
+func exit(msg string) {
+	fmt.Println(msg)
+	os.Exit(1)
 }
