@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,9 +14,13 @@ var correctCount int
 func main() {
 	fmt.Println("Welcome")
 	// first, see if there is a flag that specified name of the file.
+	fileFromCLI := flag.String("file", "problems.csv", "a csv file with questions and answers")
 	// if none: use and read problems.csv
+	fmt.Printf("You've chosen this file: %s", *fileFromCLI)
 
-	problems, err := ioutil.ReadFile("quiz-data/problems.csv")
+	fileToUse := "quiz-data/" + *fileFromCLI
+
+	problems, err := ioutil.ReadFile(fileToUse)
 
 	if err != nil {
 		fmt.Println("There has been an error opening the CSV file.")
