@@ -1,17 +1,20 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 var correctCount int
 
 func main() {
-
+	// FLAGS
 	// first, see if there is a flag that specified name of the file.
 	// if none: use and read problems.csv
 	fileFromCLI := flag.String("file", "problems.csv", "a csv file in a format: question, answer (default is: problems.csv)\n")
@@ -20,8 +23,15 @@ func main() {
 	flag.Parse()
 	fileToUse := "quiz-data/" + *fileFromCLI
 
+	seconds, err := strconv.Atoi(*timeLimit)
+	if err != nil {
+		exit("Problem converting time from string to int")
+	}
+
 	fmt.Printf("You've chosen this file: %s\n", *fileFromCLI)
-	fmt.Printf("Welcome. You have %s seconds to start the quiz. Press 'Enter' to start the quiz.\n", *timeLimit)
+	fmt.Printf("Welcome. You have %s seconds to complete the quiz. Press any key to start the quiz.\n", *timeLimit)
+	// listen to Enter being pressed (listening for a 'newline')
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 
 	// problems, err := ioutil.ReadFile(fileToUse)
 	file, err := os.Open(fileToUse)
@@ -43,7 +53,16 @@ func main() {
 
 	problems := parseLines(lines)
 
+	gameTimer := time.NewTimer(time.Second * time.Duration(seconds))
+
 	var numCorrect int
+
+	go func() {
+		<-gameTimer.C
+		fmt.Printf("\nQuiz has ended. You've answered %v out of %v questions correctly.\n", numCorrect, len(problems))
+
+		os.Exit(0)
+	}()
 
 	for i, p := range problems {
 		fmt.Printf("Problem #%d: %s = ", i+1, p.q)
@@ -53,6 +72,16 @@ func main() {
 			numCorrect++
 		}
 	}
+
+	fmt.Printf("Duration in seconds %v\n", seconds)
+
+	// defer gameTimer.Stop()
+
+	go func() {
+		fmt.Printf("Quiz has ended. You've answered %v out of %v questions correctly.\n", numCorrect, len(problems))
+		<-gameTimer.C
+		os.Exit(0)
+	}()
 
 	// post score
 	fmt.Printf("Quiz has ended. You've answered %v out of %v questions correctly.\n", numCorrect, len(problems))
