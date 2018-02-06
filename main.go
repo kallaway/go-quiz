@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -18,18 +17,12 @@ func main() {
 	// first, see if there is a flag that specified name of the file.
 	// if none: use and read problems.csv
 	fileFromCLI := flag.String("file", "problems.csv", "a csv file in a format: question, answer (default is: problems.csv)\n")
-	// flag.Parse()
-	timeLimit := flag.String("limit", "30", "a number of seconds for which the quiz runs.")
+	timeLimit := flag.Int("limit", 30, "a number of seconds for which the quiz runs.")
 	flag.Parse()
 	fileToUse := "quiz-data/" + *fileFromCLI
 
-	seconds, err := strconv.Atoi(*timeLimit)
-	if err != nil {
-		exit("Problem converting time from string to int")
-	}
-
 	fmt.Printf("You've chosen this file: %s\n", *fileFromCLI)
-	fmt.Printf("Welcome. You have %s seconds to complete the quiz. Press any key to start the quiz.\n", *timeLimit)
+	fmt.Printf("Welcome. You have %v seconds to complete the quiz. Press 'Enter' to start the quiz.\n", *timeLimit)
 	// listen to Enter being pressed (listening for a 'newline')
 	bufio.NewReader(os.Stdin).ReadBytes('\n')
 
@@ -44,44 +37,35 @@ func main() {
 	r := csv.NewReader(file)
 
 	lines, err := r.ReadAll()
-
 	if err != nil {
 		exit("Failed to parse the file")
 	}
 
-	// problemsString := string(problems)
-
 	problems := parseLines(lines)
 
-	gameTimer := time.NewTimer(time.Second * time.Duration(seconds))
-
+	gameTimer := time.NewTimer(time.Second * time.Duration(*timeLimit))
 	var numCorrect int
-
-	go func() {
-		<-gameTimer.C
-		fmt.Printf("\nQuiz has ended. You've answered %v out of %v questions correctly.\n", numCorrect, len(problems))
-
-		os.Exit(0)
-	}()
 
 	for i, p := range problems {
 		fmt.Printf("Problem #%d: %s = ", i+1, p.q)
-		var answer string
-		fmt.Scanf("%s\n", &answer)
-		if answer == p.a {
-			numCorrect++
+		answerCh := make(chan string)
+		go func() {
+			var answer string
+			fmt.Scanf("%s\n", &answer)
+			answerCh <- answer
+		}()
+		select {
+		case <-gameTimer.C:
+			fmt.Printf("\nQuiz has ended. You've answered %v out of %v questions correctly.\n", numCorrect, len(problems))
+			return
+		case answer := <-answerCh:
+			if answer == p.a {
+				numCorrect++
+			}
 		}
 	}
 
-	fmt.Printf("Duration in seconds %v\n", seconds)
-
-	// defer gameTimer.Stop()
-
-	go func() {
-		fmt.Printf("Quiz has ended. You've answered %v out of %v questions correctly.\n", numCorrect, len(problems))
-		<-gameTimer.C
-		os.Exit(0)
-	}()
+	fmt.Printf("Duration in seconds %v\n", *timeLimit)
 
 	// post score
 	fmt.Printf("Quiz has ended. You've answered %v out of %v questions correctly.\n", numCorrect, len(problems))
